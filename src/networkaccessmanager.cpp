@@ -110,7 +110,7 @@ void JsNetworkRequest::changeUrl(const QString& address)
 }
 
 // public:
-NetworkAccessManager::NetworkAccessManager(QObject *parent, const Config *config)
+NetworkAccessManager::NetworkAccessManager(QObject *parent, const Config *config, QNetworkCookieJar  *cookieJar)
     : QNetworkAccessManager(parent)
     , m_ignoreSslErrors(config->ignoreSslErrors())
     , m_authAttempts(0)
@@ -120,7 +120,7 @@ NetworkAccessManager::NetworkAccessManager(QObject *parent, const Config *config
     , m_networkDiskCache(0)
     , m_sslConfiguration(QSslConfiguration::defaultConfiguration())
 {
-    setCookieJar(CookieJar::instance());
+    setCookieJar(cookieJar);
 
     if (config->diskCacheEnabled()) {
         m_networkDiskCache = new QNetworkDiskCache(this);

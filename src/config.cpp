@@ -54,6 +54,7 @@ static const struct QCommandLineConfigEntry flags[] =
     { QCommandLine::Option, '\0', "disk-cache", "Enables disk cache: 'true' or 'false' (default)", QCommandLine::Optional },
     { QCommandLine::Option, '\0', "ignore-ssl-errors", "Ignores SSL errors (expired/self-signed certificate errors): 'true' or 'false' (default)", QCommandLine::Optional },
     { QCommandLine::Option, '\0', "load-images", "Loads all inlined images: 'true' (default) or 'false'", QCommandLine::Optional },
+    { QCommandLine::Option, '\0', "page-cookie-jars", "Uses a separate cookie jar for each webpage: 'true' or 'false' (default)"},
     { QCommandLine::Option, '\0', "local-storage-path", "Specifies the location for offline local storage", QCommandLine::Optional },
     { QCommandLine::Option, '\0', "local-storage-quota", "Sets the maximum size of the offline local storage (in KB)", QCommandLine::Optional },
     { QCommandLine::Option, '\0', "local-to-remote-url-access", "Allows local content to access remote URL: 'true' or 'false' (default)", QCommandLine::Optional },
@@ -184,6 +185,16 @@ bool Config::autoLoadImages() const
 void Config::setAutoLoadImages(const bool value)
 {
     m_autoLoadImages = value;
+}
+
+bool Config::separateCookieJars() const 
+{
+    return m_separateCookieJars;
+}
+
+void Config::setSeparateCookies(const bool value)
+{
+    m_separateCookieJars = value;
 }
 
 QString Config::cookiesFile() const
@@ -512,6 +523,7 @@ QString Config::webdriverSeleniumGridHub() const
 // private:
 void Config::resetToDefaults()
 {
+    m_separateCookieJars = false;
     m_autoLoadImages = true;
     m_cookiesFile = QString();
     m_offlineStoragePath = QString();
@@ -610,6 +622,7 @@ void Config::handleOption(const QString &option, const QVariant &value)
     booleanFlags << "local-to-remote-url-access";
     booleanFlags << "remote-debugger-autorun";
     booleanFlags << "web-security";
+    booleanFlags << "page-cookie-jars";
     if (booleanFlags.contains(option)) {
         if ((value != "true") && (value != "yes") && (value != "false") && (value != "no")) {
             setUnknownOption(QString("Invalid values for '%1' option.").arg(option));
@@ -640,6 +653,10 @@ void Config::handleOption(const QString &option, const QVariant &value)
 
     if (option == "load-images") {
         setAutoLoadImages(boolValue);
+    }
+
+    if (option == "page-cookie-jars") {
+        setSeparateCookies(boolValue);
     }
 
     if (option == "local-storage-path") {

@@ -40,10 +40,9 @@ class CookieJar: public QNetworkCookieJar
 {
     Q_OBJECT
 
-private:
-    CookieJar(QString cookiesFile, QObject *parent = NULL);
 
 public:
+    CookieJar(QString cookiesFile, QObject *parent = NULL);
     static CookieJar *instance(QString cookiesFile = QString());
     virtual ~CookieJar();
 

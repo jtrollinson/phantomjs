@@ -97,9 +97,15 @@ void Phantom::init()
     }
 
     // Initialize the CookieJar
-    CookieJar::instance(m_config.cookiesFile());
-
-    m_page = new WebPage(this, QUrl::fromLocalFile(m_config.scriptFile()));
+    if (m_config.separateCookieJars()) {
+        m_page = new WebPage(this, 
+                             new CookieJar(QString()),
+                             QUrl::fromLocalFile(m_config.scriptFile()));
+    } else {
+        m_cookieJarSingleton = new CookieJar(m_config.cookiesFile());
+        m_page = new WebPage(this, m_cookieJarSingleton, 
+                QUrl::fromLocalFile(m_config.scriptFile()));
+    } 
     m_pages.append(m_page);
 
     QString proxyType = m_config.proxyType();
@@ -281,15 +287,21 @@ bool Phantom::printDebugMessages() const
 
 bool Phantom::areCookiesEnabled() const
 {
-    return CookieJar::instance()->isEnabled();
+    if (m_config.separateCookieJars()) {
+        return false;
+    } else {
+        return m_cookieJarSingleton->isEnabled();
+    }
 }
 
 void Phantom::setCookiesEnabled(const bool value)
 {
-    if (value) {
-        CookieJar::instance()->enable();
-    } else {
-        CookieJar::instance()->disable();
+    if (!m_config.separateCookieJars()) {
+        if (value) {
+            m_cookieJarSingleton->enable();
+        } else {
+            m_cookieJarSingleton->disable();
+        }
     }
 }
 
@@ -301,7 +313,15 @@ bool Phantom::webdriverMode() const
 // public slots:
 QObject *Phantom::createWebPage()
 {
-    WebPage *page = new WebPage(this);
+    CookieJar *cookieJar;
+    if (m_config.separateCookieJars()) {
+        cookieJar = new CookieJar(QString());
+    } else {
+        cookieJar = m_cookieJarSingleton;
+    }
+    WebPage *page = new WebPage(this, cookieJar);
+
+    connect(page, SIGNAL(closing(WebPage*)), this, SLOT(deleteCookieJarFromWebPage(WebPage*)));
 
     // Store pointer to the page for later cleanup
     m_pages.append(page);
@@ -412,6 +432,13 @@ void Phantom::printConsoleMessage(const QString &message)
     Terminal::instance()->cout(message);
 }
 
+void Phantom::deleteCookieJarFromWebPage(WebPage *webPage) {
+    if (m_config.separateCookieJars()) {
+        delete webPage->cookieJar();
+    }
+}
+
+
 void Phantom::onInitialized()
 {
     // Add 'phantom' object to the global scope
@@ -426,34 +453,53 @@ void Phantom::onInitialized()
 
 bool Phantom::setCookies(const QVariantList &cookies)
 {
-    // Delete all the cookies from the CookieJar
-    CookieJar::instance()->clearCookies();
-    // Add a new set of cookies
-    return CookieJar::instance()->addCookiesFromMap(cookies);
+    if (m_config.separateCookieJars()) {
+        return false;
+    } else {
+        // Delete all the cookies from the CookieJar
+        m_cookieJarSingleton->clearCookies();
+        // Add a new set of cookies
+        return m_cookieJarSingleton->addCookiesFromMap(cookies);
+    }
 }
 
 QVariantList Phantom::cookies() const
 {
-    // Return all the Cookies in the CookieJar, as a list of Maps (aka JSON in JS space)
-    return CookieJar::instance()->cookiesToMap();
+    if (m_config.separateCookieJars()) {
+        QVariantList newList;
+        return newList;
+    } else {
+        // Return all the Cookies in the CookieJar, as a list of Maps (aka JSON in JS space)
+        return m_cookieJarSingleton->cookiesToMap();
+    }
 }
 
 bool Phantom::addCookie(const QVariantMap &cookie)
 {
-    return CookieJar::instance()->addCookieFromMap(cookie);
+    if (m_config.separateCookieJars()) {
+        return false;
+    } else {
+        return m_cookieJarSingleton->addCookieFromMap(cookie);
+    }
 }
 
 bool Phantom::deleteCookie(const QString &cookieName)
 {
-    if (!cookieName.isEmpty()) {
-        return CookieJar::instance()->deleteCookie(cookieName);
+    if (m_config.separateCookieJars()) {
+        return false;
+    } else {
+        if (!cookieName.isEmpty()) {
+            return m_cookieJarSingleton->deleteCookie(cookieName);
+        }
+        return false;
     }
-    return false;
 }
 
 void Phantom::clearCookies()
 {
-    CookieJar::instance()->clearCookies();
+    if (!m_config.separateCookieJars()) {
+        m_cookieJarSingleton->clearCookies();
+    }
 }
 
 

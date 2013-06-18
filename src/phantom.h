@@ -39,6 +39,7 @@
 #include "config.h"
 #include "system.h"
 #include "childprocess.h"
+#include "cookiejar.h"
 
 class WebPage;
 class CustomPage;
@@ -175,7 +176,7 @@ signals:
 
 private slots:
     void printConsoleMessage(const QString &msg);
-
+    void deleteCookieJarFromWebPage(WebPage *webPage);
     void onInitialized();
 
 private:
@@ -193,6 +194,7 @@ private:
     QList<QPointer<WebPage> > m_pages;
     QList<QPointer<WebServer> > m_servers;
     Config m_config;
+    CookieJar *m_cookieJarSingleton;
 
     friend class CustomPage;
 };

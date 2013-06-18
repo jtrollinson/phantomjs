@@ -36,6 +36,8 @@
 #include <QWebPage>
 #include <QWebFrame>
 
+#include "cookiejar.h"
+
 class Config;
 class CustomPage;
 class WebpageCallbacks;
@@ -79,7 +81,7 @@ class WebPage : public QObject, public QWebFrame::PrintCallback
     Q_PROPERTY(QString focusedFrameName READ focusedFrameName)
 
 public:
-    WebPage(QObject *parent, const QUrl &baseUrl = QUrl());
+    WebPage(QObject *parent, CookieJar *cookieJar, const QUrl &baseUrl = QUrl());
     virtual ~WebPage();
 
     QWebFrame *mainFrame();
@@ -356,6 +358,12 @@ public slots:
      */
     QString currentFrameName() const;
 
+
+    /**
+     * Returns the CookieJar object
+     */
+    CookieJar *cookieJar();
+
     /**
      * Allows to set cookies by this Page, at the current URL.
      * This means that loading new URLs, causes the cookies to change dynamically
@@ -513,6 +521,7 @@ private:
     QPoint m_mousePos;
     bool m_ownsPages;
     int m_loadingProgress;
+    CookieJar *m_cookieJar;
 
     friend class Phantom;
     friend class CustomPage;

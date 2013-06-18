@@ -91,9 +91,10 @@ class CustomPage: public QWebPage
     Q_OBJECT
 
 public:
-    CustomPage(WebPage *parent = 0)
+    CustomPage(WebPage *parent, CookieJar *cookieJar)
         : QWebPage(parent)
         , m_webPage(parent)
+        , m_cookieJar(cookieJar)
     {
         m_userAgent = QWebPage::userAgentForUrl(QUrl());
         setForwardUnsupportedContent(true);
@@ -209,9 +210,9 @@ protected:
 
         // Create a new "raw" WebPage object
         if (m_webPage->ownsPages()) {
-            newPage = new WebPage(m_webPage);
+            newPage = new WebPage(m_webPage, m_cookieJar);
         } else {
-            newPage = new WebPage(Phantom::instance());
+            newPage = new WebPage(Phantom::instance(), m_cookieJar);
             Phantom::instance()->m_pages.append(newPage);
         }
 
@@ -230,6 +231,7 @@ private:
     QString m_userAgent;
     QStringList m_uploadFiles;
     friend class WebPage;
+    CookieJar *m_cookieJar;
 };
 
 
@@ -308,16 +310,17 @@ private:
 };
 
 
-WebPage::WebPage(QObject *parent, const QUrl &baseUrl)
+WebPage::WebPage(QObject *parent, CookieJar *cookieJar, const QUrl &baseUrl)
     : QObject(parent)
     , m_navigationLocked(false)
     , m_mousePos(QPoint(0, 0))
     , m_ownsPages(true)
     , m_loadingProgress(0)
+    , m_cookieJar(cookieJar)
 {
     setObjectName("WebPage");
     m_callbacks = new WebpageCallbacks(this);
-    m_customWebPage = new CustomPage(this);
+    m_customWebPage = new CustomPage(this, cookieJar);
     m_mainFrame = m_customWebPage->mainFrame();
     m_currentFrame = m_mainFrame;
     m_mainFrame->setHtml(BLANK_HTML, baseUrl);
@@ -378,7 +381,7 @@ WebPage::WebPage(QObject *parent, const QUrl &baseUrl)
     m_customWebPage->settings()->setLocalStoragePath(QDesktopServices::storageLocation(QDesktopServices::DataLocation));
 
     // Custom network access manager to allow traffic monitoring.
-    m_networkAccessManager = new NetworkAccessManager(this, phantomCfg);
+    m_networkAccessManager = new NetworkAccessManager(this, phantomCfg, cookieJar);
     m_customWebPage->setNetworkAccessManager(m_networkAccessManager);
     connect(m_networkAccessManager, SIGNAL(resourceRequested(QVariant, QObject *)),
             SIGNAL(resourceRequested(QVariant, QObject *)));
@@ -745,36 +748,41 @@ QVariantMap WebPage::customHeaders() const
     return m_networkAccessManager->customHeaders();
 }
 
+CookieJar *WebPage::cookieJar() 
+{
+    return m_cookieJar;
+}
+
 bool WebPage::setCookies(const QVariantList &cookies)
 {
     // Delete all the cookies for this URL
-    CookieJar::instance()->deleteCookies(this->url());
+    m_cookieJar->deleteCookies(this->url());
     // Add a new set of cookies foor this URL
-    return CookieJar::instance()->addCookiesFromMap(cookies, this->url());
+    return m_cookieJar->addCookiesFromMap(cookies, this->url());
 }
 
 QVariantList WebPage::cookies() const
 {
     // Return all the Cookies visible to this Page, as a list of Maps (aka JSON in JS space)
-    return CookieJar::instance()->cookiesToMap(this->url());
+    return m_cookieJar->cookiesToMap(this->url());
 }
 
 bool WebPage::addCookie(const QVariantMap &cookie)
 {
-    return CookieJar::instance()->addCookieFromMap(cookie, this->url());
+    return m_cookieJar->addCookieFromMap(cookie, this->url());
 }
 
 bool WebPage::deleteCookie(const QString &cookieName)
 {
     if (!cookieName.isEmpty()) {
-        return CookieJar::instance()->deleteCookie(cookieName, this->url());
+        return m_cookieJar->deleteCookie(cookieName, this->url());
     }
     return false;
 }
 
 bool WebPage::clearCookies()
 {
-    return CookieJar::instance()->deleteCookies(this->url());
+    return m_cookieJar->deleteCookies(this->url());
 }
 
 void WebPage::openUrl(const QString &address, const QVariant &op, const QVariantMap &settings)

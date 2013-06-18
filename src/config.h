@@ -76,6 +76,9 @@ public:
     bool autoLoadImages() const;
     void setAutoLoadImages(const bool value);
 
+    bool separateCookieJars() const;
+    void setSeparateCookies(const bool value);
+
     QString cookiesFile() const;
     void setCookiesFile(const QString &cookiesFile);
 
@@ -188,6 +191,7 @@ private:
 
     QCommandLine *m_cmdLine;
     bool m_autoLoadImages;
+    bool m_separateCookieJars;
     QString m_cookiesFile;
     QString m_offlineStoragePath;
     int m_offlineStorageDefaultQuota;
